@@ -1,5 +1,8 @@
 # Release Retention Rule Coding Exercise Solution
 
+## Retain releases by tags
+Additional rule to retain releases by tags. If a release has a tag 'prod', it must be retained even if it wasn't deployed. 
+
 ## Prerequisites
 
 - `Visual Studio 2022`

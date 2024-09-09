@@ -36,10 +36,6 @@ public class ReleaseRetentionServiceUnitTests
         {
             // Arrange
             var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 3, deploymentEnvironmentsNum: 1);
-            _projectRepositoryMock.Setup(repo => repo.GetAll()).Returns(projects);
-            _releaseRepositoryMock.Setup(repo => repo.GetAll()).Returns(releases);
-            _releaseRepositoryMock.Setup(repo => repo.GetById(It.IsAny<string>())).Returns<string>(id => releases.FirstOrDefault(r => r.Id == id));
-            _deploymentEnvironmentRepositoryMock.Setup(repo => repo.GetAll()).Returns(deploymentEnvironments);
 
             var deployments = new List<Deployment>
             {
@@ -47,7 +43,8 @@ public class ReleaseRetentionServiceUnitTests
                 new Deployment { Id = "Deployment-2", ReleaseId = releases[1].Id, EnvironmentId = deploymentEnvironments[0].Id, DeployedAt = DateTime.Now.AddDays(-2) },
                 new Deployment { Id = "Deployment-3", ReleaseId = releases[2].Id, EnvironmentId = deploymentEnvironments[0].Id, DeployedAt = DateTime.Now.AddDays(-1) }
             };
-            _deploymentRepositoryMock.Setup(repo => repo.GetAll()).Returns(deployments);
+
+            SetupMocks(projects, releases, deploymentEnvironments, deployments);
 
             // Act
             var result = _sut.GetReleasesToKeep(2);
@@ -58,22 +55,40 @@ public class ReleaseRetentionServiceUnitTests
             Assert.Contains(result, r => r.Id == "Release-3");
         }
 
+        private void SetupMocks(List<Project> projects, List<Release> releases, List<DeploymentEnvironment> deploymentEnvironments, List<Deployment> deployments)
+        {
+            _projectRepositoryMock.Setup(repo => repo
+                .GetAll(It.IsAny<Func<Project, bool>?>()))
+                .Returns<Func<Project, bool>?>(f => f == null ? projects : projects.Where(f).ToList());
+
+            _releaseRepositoryMock.Setup(repo => repo
+                .GetAll(It.IsAny<Func<Release, bool>?>()))
+                .Returns<Func<Release, bool>?>(f => f == null ? releases : releases.Where(f).ToList());
+
+            _releaseRepositoryMock.Setup(repo => repo.GetById(It.IsAny<string>())).Returns<string>(id => releases.FirstOrDefault(r => r.Id == id));
+
+            _deploymentEnvironmentRepositoryMock.Setup(repo => repo
+                .GetAll(It.IsAny<Func<DeploymentEnvironment, bool>?>()))
+                .Returns<Func<DeploymentEnvironment, bool>?>(f => f == null ? deploymentEnvironments : deploymentEnvironments.Where(f).ToList());
+
+            _deploymentRepositoryMock.Setup(repo => repo
+                .GetAll(It.IsAny<Func<Deployment, bool>?>()))
+                .Returns<Func<Deployment, bool>?>(f => f == null ? deployments : deployments.Where(f).ToList());
+        }
+
         [Fact]
         public void ShouldReturnAllDeployedReleases_WhenFewerDeployedReleasesExist_ThanRetentionLimit()
         {
             // Arrange
             var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 3, deploymentEnvironmentsNum: 1);
-            _projectRepositoryMock.Setup(repo => repo.GetAll()).Returns(projects);
-            _releaseRepositoryMock.Setup(repo => repo.GetAll()).Returns(releases);
-            _releaseRepositoryMock.Setup(repo => repo.GetById(It.IsAny<string>())).Returns<string>(id => releases.FirstOrDefault(r => r.Id == id));
-            _deploymentEnvironmentRepositoryMock.Setup(repo => repo.GetAll()).Returns(deploymentEnvironments);
 
             var deployments = new List<Deployment>
             {
                 new Deployment { Id = "Deployment-1", ReleaseId = releases[0].Id, EnvironmentId = deploymentEnvironments[0].Id, DeployedAt = DateTime.Now.AddDays(-5) },
                 new Deployment { Id = "Deployment-2", ReleaseId = releases[1].Id, EnvironmentId = deploymentEnvironments[0].Id, DeployedAt = DateTime.Now.AddDays(-2) },
             };
-            _deploymentRepositoryMock.Setup(repo => repo.GetAll()).Returns(deployments);
+
+            SetupMocks(projects, releases, deploymentEnvironments, deployments);
 
             // Act
             var result = _sut.GetReleasesToKeep(5);
@@ -89,10 +104,6 @@ public class ReleaseRetentionServiceUnitTests
         {
             // Arrange
             var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 1, deploymentEnvironmentsNum: 3);
-            _projectRepositoryMock.Setup(repo => repo.GetAll()).Returns(projects);
-            _releaseRepositoryMock.Setup(repo => repo.GetAll()).Returns(releases);
-            _releaseRepositoryMock.Setup(repo => repo.GetById(It.IsAny<string>())).Returns<string>(id => releases.FirstOrDefault(r => r.Id == id));
-            _deploymentEnvironmentRepositoryMock.Setup(repo => repo.GetAll()).Returns(deploymentEnvironments);
 
             var deployments = new List<Deployment>
             {
@@ -100,7 +111,8 @@ public class ReleaseRetentionServiceUnitTests
                 new Deployment { Id = "Deployment-2", ReleaseId = releases[0].Id, EnvironmentId = deploymentEnvironments[1].Id, DeployedAt = DateTime.Now.AddDays(-2) },
                 new Deployment { Id = "Deployment-3", ReleaseId = releases[0].Id, EnvironmentId = deploymentEnvironments[2].Id, DeployedAt = DateTime.Now.AddDays(-1) }
             };
-            _deploymentRepositoryMock.Setup(repo => repo.GetAll()).Returns(deployments);
+
+            SetupMocks(projects, releases, deploymentEnvironments, deployments);
 
             // Act
             var result = _sut.GetReleasesToKeep(2);
@@ -115,10 +127,10 @@ public class ReleaseRetentionServiceUnitTests
         {
             // Arrange
             var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 1, deploymentEnvironmentsNum: 1);
-            _projectRepositoryMock.Setup(repo => repo.GetAll()).Returns(projects);
-            _releaseRepositoryMock.Setup(repo => repo.GetAll()).Returns(releases);
-            _deploymentEnvironmentRepositoryMock.Setup(repo => repo.GetAll()).Returns(deploymentEnvironments);
-            _deploymentRepositoryMock.Setup(repo => repo.GetAll()).Returns(new List<Deployment>());
+
+            var deployments = new List<Deployment>();
+
+            SetupMocks(projects, releases, deploymentEnvironments, deployments);
 
             // Act
             var result = _sut.GetReleasesToKeep(2);
@@ -132,16 +144,13 @@ public class ReleaseRetentionServiceUnitTests
         {
             // Arrange
             var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 3, deploymentEnvironmentsNum: 1);
-            _projectRepositoryMock.Setup(repo => repo.GetAll()).Returns(projects);
-            _releaseRepositoryMock.Setup(repo => repo.GetAll()).Returns(releases);
-            _releaseRepositoryMock.Setup(repo => repo.GetById(It.IsAny<string>())).Returns<string>(id => releases.FirstOrDefault(r => r.Id == id));
-            _deploymentEnvironmentRepositoryMock.Setup(repo => repo.GetAll()).Returns(deploymentEnvironments);
 
             var deployments = new List<Deployment>
             {
                 new Deployment { Id = "Deployment-1", EnvironmentId = deploymentEnvironments[0].Id, ReleaseId = releases[2].Id, DeployedAt = DateTime.Now },
             };
-            _deploymentRepositoryMock.Setup(repo => repo.GetAll()).Returns(deployments);
+
+            SetupMocks(projects, releases, deploymentEnvironments, deployments);
 
             // Act
             var result = _sut.GetReleasesToKeep(2);
@@ -156,17 +165,14 @@ public class ReleaseRetentionServiceUnitTests
         {
             // Arrange
             var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 1, deploymentEnvironmentsNum: 2);
-            _projectRepositoryMock.Setup(repo => repo.GetAll()).Returns(projects);
-            _releaseRepositoryMock.Setup(repo => repo.GetAll()).Returns(releases);
-            _releaseRepositoryMock.Setup(repo => repo.GetById(It.IsAny<string>())).Returns<string>(id => releases.FirstOrDefault(r => r.Id == id));
-            _deploymentEnvironmentRepositoryMock.Setup(repo => repo.GetAll()).Returns(deploymentEnvironments);
 
             var deployments = new List<Deployment>
             {
                 new Deployment { Id = "Deployment-1", EnvironmentId = deploymentEnvironments[0].Id, ReleaseId = releases[0].Id, DeployedAt = DateTime.Now },
                 new Deployment { Id = "Deployment-2", EnvironmentId = deploymentEnvironments[1].Id, ReleaseId = releases[0].Id, DeployedAt = DateTime.Now.AddDays(-1)},
             };
-            _deploymentRepositoryMock.Setup(repo => repo.GetAll()).Returns(deployments);
+
+            SetupMocks(projects, releases, deploymentEnvironments, deployments);
 
             // Act
             var result = _sut.GetReleasesToKeep(1);
@@ -181,22 +187,19 @@ public class ReleaseRetentionServiceUnitTests
         {
             // Arrange
             var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 1, deploymentEnvironmentsNum: 1);
-            _projectRepositoryMock.Setup(repo => repo.GetAll()).Returns(projects);
-            _releaseRepositoryMock.Setup(repo => repo.GetAll()).Returns(releases);
-            _releaseRepositoryMock.Setup(repo => repo.GetById(It.IsAny<string>())).Returns<string>(id => releases.FirstOrDefault(r => r.Id == id));
-            _deploymentEnvironmentRepositoryMock.Setup(repo => repo.GetAll()).Returns(deploymentEnvironments);
 
             var deployments = new List<Deployment>
             {
                 new Deployment { Id = "Deployment-1", EnvironmentId = deploymentEnvironments[0].Id, ReleaseId = releases[0].Id, DeployedAt = new DateTime(2024, 01, 01) },
             };
-            _deploymentRepositoryMock.Setup(repo => repo.GetAll()).Returns(deployments);
+
+            SetupMocks(projects, releases, deploymentEnvironments, deployments);
 
             // Act
             _sut.GetReleasesToKeep(1);
 
             // Assert
-            _loggerMock.Verify(logger => logger.Log(It.Is<string>(msg => 
+            _loggerMock.Verify(logger => logger.Log(It.Is<string>(msg =>
                 msg == "Release Release-1 (Version: 1.0.1) was retained because it is within 1 most recent deployed in Environment-1. Deployment date is: 1/01/2024 12:00:00 AM")), Times.Once);
         }
 
@@ -205,10 +208,6 @@ public class ReleaseRetentionServiceUnitTests
         {
             // Arrange
             var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 3, deploymentEnvironmentsNum: 1);
-            _projectRepositoryMock.Setup(repo => repo.GetAll()).Returns(projects);
-            _releaseRepositoryMock.Setup(repo => repo.GetAll()).Returns(releases);
-            _releaseRepositoryMock.Setup(repo => repo.GetById(It.IsAny<string>())).Returns<string>(id => releases.FirstOrDefault(r => r.Id == id));
-            _deploymentEnvironmentRepositoryMock.Setup(repo => repo.GetAll()).Returns(deploymentEnvironments);
 
             var deployments = new List<Deployment>
             {
@@ -216,7 +215,8 @@ public class ReleaseRetentionServiceUnitTests
                 new Deployment { Id = "Deployment-2", EnvironmentId = deploymentEnvironments[0].Id, ReleaseId = releases[1].Id, DeployedAt = DateTime.Now.AddDays(-1) },
                 new Deployment { Id = "Deployment-3", EnvironmentId = deploymentEnvironments[0].Id, ReleaseId = releases[2].Id, DeployedAt = DateTime.Now },
             };
-            _deploymentRepositoryMock.Setup(repo => repo.GetAll()).Returns(deployments);
+
+            SetupMocks(projects, releases, deploymentEnvironments, deployments);
 
             // Act
             _sut.GetReleasesToKeep(5);
@@ -230,11 +230,8 @@ public class ReleaseRetentionServiceUnitTests
         {
             // Arrange
             var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 1, deploymentEnvironmentsNum: 1);
-            _projectRepositoryMock.Setup(repo => repo.GetAll()).Returns(projects);
-            _releaseRepositoryMock.Setup(repo => repo.GetAll()).Returns(releases);
-            _releaseRepositoryMock.Setup(repo => repo.GetById(It.IsAny<string>())).Returns<string>(id => releases.FirstOrDefault(r => r.Id == id));
-            _deploymentEnvironmentRepositoryMock.Setup(repo => repo.GetAll()).Returns(deploymentEnvironments);
-            _deploymentRepositoryMock.Setup(repo => repo.GetAll()).Returns(new List<Deployment>());
+            var deployments = new List<Deployment>();
+            SetupMocks(projects, releases, deploymentEnvironments, deployments);
 
             // Act
             _sut.GetReleasesToKeep(1);

@@ -11,8 +11,13 @@ public class Repository<T> : IRepository<T> where T : class
         _entities = entities;
     }
 
-    public List<T> GetAll()
+    public List<T> GetAll(Func<T, bool>? filter = null)
     {
+        if (filter != null)
+        {
+            return _entities.Where(filter).ToList();
+
+        }
         return _entities;
     }
 
