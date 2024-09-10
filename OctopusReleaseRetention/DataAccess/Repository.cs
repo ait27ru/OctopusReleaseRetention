@@ -16,7 +16,6 @@ public class Repository<T> : IRepository<T> where T : class
         if (filter != null)
         {
             return _entities.Where(filter).ToList();
-
         }
         return _entities;
     }
