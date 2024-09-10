@@ -1,4 +1,5 @@
-﻿using OctopusReleaseRetention.Entities;
+﻿using OctopusReleaseRetention.Core;
+using OctopusReleaseRetention.Entities;
 using OctopusReleaseRetention.Interfaces;
 using System;
 
@@ -29,27 +30,62 @@ public class ReleaseRetentionService : IReleaseRetentionService
     public List<Release> GetReleasesToKeep(int numberOfReleasesToKeep)
     {
         var releasesToRetain = new HashSet<Release>();
+        var tags = new HashSet<string> { "prod" };
 
-        var deploymentsByProjectAndEnvironment = _deploymentRepository.GetAll()
-            .GroupBy(d => new { d.EnvironmentId, _releaseRepository.GetById(d.ReleaseId)!.ProjectId })
-            .ToList();
-
-        foreach (var group in deploymentsByProjectAndEnvironment)
+        foreach (var project in _projectRepository.GetAll())
         {
-            var topReleases = group
-                .GroupBy(d => d.ReleaseId)
-                .Select(g => new { ReleaseId = g.Key, DeployedAt = g.Max(d => d.DeployedAt), group.Key.EnvironmentId })
-                .OrderByDescending(d => d.DeployedAt)
-                .Take(numberOfReleasesToKeep)
-                .ToList();
+            var taggedReleases = _releaseRepository.GetAll(r => r.ProjectId == project.Id && tags.Contains(r.Tag ?? ""));
 
-            foreach (var topRelease in topReleases)
+            foreach (var release in taggedReleases)
             {
-                var release = _releaseRepository.GetById(topRelease.ReleaseId)!;
                 releasesToRetain.Add(release);
-                _logger.Log($"Release {release.Id} (Version: {release.Version}) was retained because it is within {numberOfReleasesToKeep} most recent deployed in {topRelease.EnvironmentId}. Deployment date is: {topRelease.DeployedAt}");
+                _logger.Log($"Release {release.Id} (Version: {release.Version}) was retained because it is tagged = '{release.Tag}'");
+            }
+
+            foreach (var deploymentEnvironment in _deploymentEnvironmentRepository.GetAll())
+            {
+                var nonTaggedDeployments = _deploymentRepository
+                    .GetAll(d =>
+                        _releaseRepository.GetById(d.ReleaseId)?.ProjectId == project.Id
+                        && !tags.Contains(_releaseRepository.GetById(d.ReleaseId)?.Tag ?? string.Empty)
+                        && d.EnvironmentId == deploymentEnvironment.Id);
+
+                var topReleases = nonTaggedDeployments
+                    .GroupBy(d => d.ReleaseId)
+                    .Select(g => new { ReleaseId = g.Key, EnvironmentId = deploymentEnvironment.Id, DeployedAt = g.Max(d => d.DeployedAt) })
+                    .OrderByDescending(d => d.DeployedAt)
+                    .Take(numberOfReleasesToKeep)
+                    .ToList();
+
+                foreach (var topRelease in topReleases)
+                {
+                    var release = _releaseRepository.GetById(topRelease.ReleaseId)!;
+                    releasesToRetain.Add(release);
+                    _logger.Log($"Release {release.Id} (Version: {release.Version}) was retained because it is within {numberOfReleasesToKeep} most recent deployed in {topRelease.EnvironmentId}. Deployment date is: {topRelease.DeployedAt}");
+                }
             }
         }
+
+        //var deploymentsByProjectAndEnvironment = _deploymentRepository.GetAll()
+        //    .GroupBy(d => new { d.EnvironmentId, _releaseRepository.GetById(d.ReleaseId)!.ProjectId })
+        //    .ToList();
+
+        //foreach (var group in deploymentsByProjectAndEnvironment)
+        //{
+        //    var topReleases = group
+        //        .GroupBy(d => d.ReleaseId)
+        //        .Select(g => new { ReleaseId = g.Key, DeployedAt = g.Max(d => d.DeployedAt), group.Key.EnvironmentId })
+        //        .OrderByDescending(d => d.DeployedAt)
+        //        .Take(numberOfReleasesToKeep)
+        //        .ToList();
+
+        //    foreach (var topRelease in topReleases)
+        //    {
+        //        var release = _releaseRepository.GetById(topRelease.ReleaseId)!;
+        //        releasesToRetain.Add(release);
+        //        _logger.Log($"Release {release.Id} (Version: {release.Version}) was retained because it is within {numberOfReleasesToKeep} most recent deployed in {topRelease.EnvironmentId}. Deployment date is: {topRelease.DeployedAt}");
+        //    }
+        //}
         return releasesToRetain.ToList();
     }
 }

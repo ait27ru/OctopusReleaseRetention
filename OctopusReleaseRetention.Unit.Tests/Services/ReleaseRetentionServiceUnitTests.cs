@@ -55,27 +55,6 @@ public class ReleaseRetentionServiceUnitTests
             Assert.Contains(result, r => r.Id == "Release-3");
         }
 
-        private void SetupMocks(List<Project> projects, List<Release> releases, List<DeploymentEnvironment> deploymentEnvironments, List<Deployment> deployments)
-        {
-            _projectRepositoryMock.Setup(repo => repo
-                .GetAll(It.IsAny<Func<Project, bool>?>()))
-                .Returns<Func<Project, bool>?>(f => f == null ? projects : projects.Where(f).ToList());
-
-            _releaseRepositoryMock.Setup(repo => repo
-                .GetAll(It.IsAny<Func<Release, bool>?>()))
-                .Returns<Func<Release, bool>?>(f => f == null ? releases : releases.Where(f).ToList());
-
-            _releaseRepositoryMock.Setup(repo => repo.GetById(It.IsAny<string>())).Returns<string>(id => releases.FirstOrDefault(r => r.Id == id));
-
-            _deploymentEnvironmentRepositoryMock.Setup(repo => repo
-                .GetAll(It.IsAny<Func<DeploymentEnvironment, bool>?>()))
-                .Returns<Func<DeploymentEnvironment, bool>?>(f => f == null ? deploymentEnvironments : deploymentEnvironments.Where(f).ToList());
-
-            _deploymentRepositoryMock.Setup(repo => repo
-                .GetAll(It.IsAny<Func<Deployment, bool>?>()))
-                .Returns<Func<Deployment, bool>?>(f => f == null ? deployments : deployments.Where(f).ToList());
-        }
-
         [Fact]
         public void ShouldReturnAllDeployedReleases_WhenFewerDeployedReleasesExist_ThanRetentionLimit()
         {
@@ -239,6 +218,84 @@ public class ReleaseRetentionServiceUnitTests
             // Assert
             _loggerMock.Verify(logger => logger.Log(It.IsAny<string>()), Times.Never);
         }
+
+        [Fact]
+        public void ShouldReturnTaggedRelease_WhenNoDeployedReleasesExist()
+        {
+            // Arrange
+            var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 3, deploymentEnvironmentsNum: 1);
+            releases[2].Tag = "prod";
+            var deployments = new List<Deployment>();
+            SetupMocks(projects, releases, deploymentEnvironments, deployments);
+
+            // Act
+            var result = _sut.GetReleasesToKeep(1);
+
+            // Assert
+            Assert.Single(result);
+            Assert.Contains(result, r => r.Id == "Release-3"); // tagged
+        }
+
+        [Fact]
+        public void ShouldLogTaggedRelease_WhenNoDeployedReleasesExist()
+        {
+            // Arrange
+            var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 3, deploymentEnvironmentsNum: 1);
+            releases[2].Tag = "prod";
+            var deployments = new List<Deployment>();
+            SetupMocks(projects, releases, deploymentEnvironments, deployments);
+
+            // Act
+            _sut.GetReleasesToKeep(1);
+
+            // Assert
+            _loggerMock.Verify(logger => logger.Log(It.Is<string>(msg => msg == "Release Release-3 (Version: 1.0.3) was retained because it is tagged = 'prod'")), Times.Once);
+        }
+
+        [Fact]
+        public void ShouldReturnTaggedAndDeployedReleases_WhenTaggedAndDeployedReleasesExist()
+        {
+            // Arrange
+            var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 3, deploymentEnvironmentsNum: 1);
+            releases[0].Tag = "prod";
+            var deployments = new List<Deployment>
+            {
+                new Deployment { Id = "Deployment-1", EnvironmentId = deploymentEnvironments[0].Id, ReleaseId = releases[1].Id, DeployedAt = new DateTime(2024, 1, 1) },
+                new Deployment { Id = "Deployment-2", EnvironmentId = deploymentEnvironments[0].Id, ReleaseId = releases[2].Id, DeployedAt = new DateTime(2024, 1, 2) },
+            };
+            SetupMocks(projects, releases, deploymentEnvironments, deployments);
+
+            // Act
+            var result = _sut.GetReleasesToKeep(1);
+
+            // Assert
+            Assert.Equal(2, result.Count);
+            Assert.Contains(result, r => r.Id == "Release-1"); // tagged
+            Assert.Contains(result, r => r.Id == "Release-3"); // 1 most resently deployed
+        }
+
+        [Fact]
+        public void ShouldLogTaggedAndDeployedReleases_WhenTaggedAndDeployedReleasesExist()
+        {
+            // Arrange
+            var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 3, deploymentEnvironmentsNum: 1);
+            releases[0].Tag = "prod";
+            var deployments = new List<Deployment>
+            {
+                new Deployment { Id = "Deployment-1", EnvironmentId = deploymentEnvironments[0].Id, ReleaseId = releases[1].Id, DeployedAt = new DateTime(2024, 1, 1) },
+                new Deployment { Id = "Deployment-2", EnvironmentId = deploymentEnvironments[0].Id, ReleaseId = releases[2].Id, DeployedAt = new DateTime(2024, 1, 2) },
+            };
+            SetupMocks(projects, releases, deploymentEnvironments, deployments);
+
+            // Act
+            _sut.GetReleasesToKeep(1);
+
+            // Assert
+            _loggerMock.Verify(logger => logger.Log(It.IsAny<string>()), Times.Exactly(2));
+            _loggerMock.Verify(logger => logger.Log(It.Is<string>(msg => msg == "Release Release-1 (Version: 1.0.1) was retained because it is tagged = 'prod'")), Times.Once);
+            _loggerMock.Verify(logger => logger.Log(It.Is<string>(msg => msg == "Release Release-3 (Version: 1.0.3) was retained because it is within 1 most recent deployed in Environment-1. Deployment date is: 2/01/2024 12:00:00 AM")), Times.Once);
+        }
+
     };
 
     private List<Project> GetDummyProjects(int num)
@@ -285,6 +342,26 @@ public class ReleaseRetentionServiceUnitTests
         var deploymentEnvironments = GetDummyDeploymentEnvironments(deploymentEnvironmentsNum);
 
         return (projects, releases, deploymentEnvironments);
+    }
+    private void SetupMocks(List<Project> projects, List<Release> releases, List<DeploymentEnvironment> deploymentEnvironments, List<Deployment> deployments)
+    {
+        _projectRepositoryMock.Setup(repo => repo
+            .GetAll(It.IsAny<Func<Project, bool>?>()))
+            .Returns<Func<Project, bool>?>(f => f == null ? projects : projects.Where(f).ToList());
+
+        _releaseRepositoryMock.Setup(repo => repo
+            .GetAll(It.IsAny<Func<Release, bool>?>()))
+            .Returns<Func<Release, bool>?>(f => f == null ? releases : releases.Where(f).ToList());
+
+        _releaseRepositoryMock.Setup(repo => repo.GetById(It.IsAny<string>())).Returns<string>(id => releases.FirstOrDefault(r => r.Id == id));
+
+        _deploymentEnvironmentRepositoryMock.Setup(repo => repo
+            .GetAll(It.IsAny<Func<DeploymentEnvironment, bool>?>()))
+            .Returns<Func<DeploymentEnvironment, bool>?>(filter => filter == null ? deploymentEnvironments : deploymentEnvironments.Where(filter).ToList());
+
+        _deploymentRepositoryMock.Setup(repo => repo
+            .GetAll(It.IsAny<Func<Deployment, bool>?>()))
+            .Returns<Func<Deployment, bool>?>(filter => filter == null ? deployments : deployments.Where(filter).ToList());
     }
 }
 
