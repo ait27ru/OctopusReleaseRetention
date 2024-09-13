@@ -104,5 +104,80 @@ namespace OctopusReleaseRetention.Services.Integration.Tests
                 Assert.Contains(logs, m => m == "Release Release-6 (Version: 1.0.2) was retained because it is within 1 most recent deployed in Environment-2. Deployment date is: 2/01/2000 11:00:00 AM");
             }
         }
+        public class GetReleasesToKeepAsync : ReleaseRetentionServiceIntegrationTests
+        {
+            [Fact()]
+            public async Task ShouldReturnAllDeployedReleases_WhenFewerDeployedReleasesExist_ThanRetentionLimit()
+            {
+                // Arrane
+                var releasesToKeep = 5;
+
+                // Act
+                var result = await _sut.GetReleasesToKeepAsync(releasesToKeep);
+
+                // Assert
+                Assert.Equal(5, result.Count);
+                Assert.Contains(result, r => r.Id == "Release-1");
+                Assert.Contains(result, r => r.Id == "Release-2");
+                Assert.Contains(result, r => r.Id == "Release-5");
+                Assert.Contains(result, r => r.Id == "Release-6");
+                Assert.Contains(result, r => r.Id == "Release-7");
+            }
+
+            [Fact()]
+            public async Task ShouldLogAllDeployedReleases_WhenFewerDeployedReleasesExist_ThanRetentionLimit()
+            {
+                // Arrane
+                var releasesToKeep = 5;
+
+                // Act
+                await _sut.GetReleasesToKeepAsync(releasesToKeep);
+
+                // Assert
+                var logs = ((InMemoryLogger)_logger).GetLogs();
+                Assert.Equal(7, logs.Count);
+                Assert.Contains(logs, m => m == "Release Release-2 (Version: 1.0.1) was retained because it is within 5 most recent deployed in Environment-1. Deployment date is: 2/01/2000 10:00:00 AM");
+                Assert.Contains(logs, m => m == "Release Release-1 (Version: 1.0.0) was retained because it is within 5 most recent deployed in Environment-1. Deployment date is: 1/01/2000 10:00:00 AM");
+                Assert.Contains(logs, m => m == "Release Release-1 (Version: 1.0.0) was retained because it is within 5 most recent deployed in Environment-2. Deployment date is: 2/01/2000 11:00:00 AM");
+                Assert.Contains(logs, m => m == "Release Release-6 (Version: 1.0.2) was retained because it is within 5 most recent deployed in Environment-1. Deployment date is: 2/01/2000 2:00:00 PM");
+                Assert.Contains(logs, m => m == "Release Release-7 (Version: 1.0.3) was retained because it is within 5 most recent deployed in Environment-1. Deployment date is: 2/01/2000 1:00:00 PM");
+                Assert.Contains(logs, m => m == "Release Release-5 (Version: 1.0.1-ci1) was retained because it is within 5 most recent deployed in Environment-1. Deployment date is: 1/01/2000 11:00:00 AM");
+                Assert.Contains(logs, m => m == "Release Release-6 (Version: 1.0.2) was retained because it is within 5 most recent deployed in Environment-2. Deployment date is: 2/01/2000 11:00:00 AM");
+            }
+
+            [Fact()]
+            public async Task ShouldReturnCorrectReleases_WhenMoreDeployedReleasesExist_ThanRetentionLimit()
+            {
+                // Arrane
+                var releasesToKeep = 1;
+
+                // Act
+                var result = await _sut.GetReleasesToKeepAsync(releasesToKeep);
+
+                // Assert
+                Assert.Equal(3, result.Count);
+                Assert.Contains(result, r => r.Id == "Release-1");
+                Assert.Contains(result, r => r.Id == "Release-2");
+                Assert.Contains(result, r => r.Id == "Release-6");
+            }
+
+            [Fact()]
+            public async Task ShouldLogCorrectReleases_WhenMoreDeployedReleasesExist_ThanRetentionLimit()
+            {
+                // Arrane
+                var releasesToKeep = 1;
+
+                // Act
+                await _sut.GetReleasesToKeepAsync(releasesToKeep);
+
+                // Assert
+                var logs = ((InMemoryLogger)_logger).GetLogs();
+                Assert.Equal(4, logs.Count);
+                Assert.Contains(logs, m => m == "Release Release-2 (Version: 1.0.1) was retained because it is within 1 most recent deployed in Environment-1. Deployment date is: 2/01/2000 10:00:00 AM");
+                Assert.Contains(logs, m => m == "Release Release-1 (Version: 1.0.0) was retained because it is within 1 most recent deployed in Environment-2. Deployment date is: 2/01/2000 11:00:00 AM");
+                Assert.Contains(logs, m => m == "Release Release-6 (Version: 1.0.2) was retained because it is within 1 most recent deployed in Environment-1. Deployment date is: 2/01/2000 2:00:00 PM");
+                Assert.Contains(logs, m => m == "Release Release-6 (Version: 1.0.2) was retained because it is within 1 most recent deployed in Environment-2. Deployment date is: 2/01/2000 11:00:00 AM");
+            }
+        }
     }
 }
