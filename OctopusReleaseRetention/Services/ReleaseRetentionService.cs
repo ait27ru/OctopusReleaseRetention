@@ -1,7 +1,5 @@
-﻿using OctopusReleaseRetention.Core;
-using OctopusReleaseRetention.Entities;
+﻿using OctopusReleaseRetention.Entities;
 using OctopusReleaseRetention.Interfaces;
-using System;
 
 namespace OctopusReleaseRetention.Services;
 
@@ -37,12 +35,12 @@ public class ReleaseRetentionService : IReleaseRetentionService
         var releasesToRetain = new HashSet<Release>();
         var tagsHash = new HashSet<string>(tagsToRetain ?? new List<string>());
 
-        var taggedReleases = _releaseRepository.GetAll(r => !string.IsNullOrEmpty(r.Tag));
+        var taggedReleases = _releaseRepository.GetAll(r => r.Tags?.Any(t => tagsHash.Contains(t)) ?? false);
 
         foreach (var release in taggedReleases)
         {
             releasesToRetain.Add(release);
-            _logger.Log($"Release {release.Id} (Version: {release.Version}) was retained because it is tagged: {release.Tag}");
+            _logger.Log($"Release {release.Id} (Version: {release.Version}) was retained because it is tagged = '{string.Join(',', release?.Tags ?? [""])}'");
         }
 
         foreach (var project in _projectRepository.GetAll())
@@ -54,7 +52,7 @@ public class ReleaseRetentionService : IReleaseRetentionService
                     var release = _releaseRepository.GetById(d.ReleaseId)!;
                     return d.EnvironmentId == deplEnv.Id
                         && release.ProjectId == project.Id
-                        && !tagsHash.Contains(release.Tag ?? "");
+                        && !(release.Tags?.Any(t => tagsHash.Contains(t)) ?? false);
                 });
 
                 var topReleases = nonTaggedDeployments.GroupBy(r => r.ReleaseId)
@@ -72,27 +70,6 @@ public class ReleaseRetentionService : IReleaseRetentionService
             }
         }
 
-
-        //var deploymentsByProjectAndEnvironment = _deploymentRepository.GetAll()
-        //    .GroupBy(d => new { d.EnvironmentId, _releaseRepository.GetById(d.ReleaseId)!.ProjectId })
-        //    .ToList();
-
-        //foreach (var group in deploymentsByProjectAndEnvironment)
-        //{
-        //    var topReleases = group
-        //        .GroupBy(d => d.ReleaseId)
-        //        .Select(g => new { ReleaseId = g.Key, DeployedAt = g.Max(d => d.DeployedAt), group.Key.EnvironmentId })
-        //        .OrderByDescending(d => d.DeployedAt)
-        //        .Take(numberOfReleasesToKeep)
-        //        .ToList();
-
-        //    foreach (var topRelease in topReleases)
-        //    {
-        //        var release = _releaseRepository.GetById(topRelease.ReleaseId)!;
-        //        releasesToRetain.Add(release);
-        //        _logger.Log($"Release {release.Id} (Version: {release.Version}) was retained because it is within {numberOfReleasesToKeep} most recent deployed in {topRelease.EnvironmentId}. Deployment date is: {topRelease.DeployedAt}");
-        //    }
-        //}
         return releasesToRetain.ToList();
     }
 }

@@ -110,12 +110,12 @@ public class ReleaseRetentionServiceUnitTests
         }
 
         [Fact]
-        public void ShouldReturnTaggedReleases_WhenNoDeploymentsExist()
+        public void ShouldReturnTaggedReleases_WhenTagMatchAndNoDeploymentsExist()
         {
             // Arrange
             var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 1, deploymentEnvironmentsNum: 1);
-            releases[0].Tag = "prod";
-            var tagsToRetain = new List<string>() { "prod" };
+            releases[0].Tags = new List<string> { "prod", "uat" };
+            var tagsToRetain = new List<string>() { "prod", "dev" };
             SetupMocks(projects, releases, deploymentEnvironments, new List<Deployment>());
 
             // Act
@@ -123,9 +123,23 @@ public class ReleaseRetentionServiceUnitTests
 
             // Assert
             Assert.Single(result);
-            Assert.Contains(result, r => r.Id == "Release-1" && r.Tag == "prod");
-            Assert.Collection(result,
-                r => Assert.Equal("Release-1, prod", $"{r.Id}, {r.Tag}"));
+            Assert.Contains(result, r => r.Id == "Release-1" && (r.Tags?.Contains("prod") ?? false) || (r.Tags?.Contains("dev") ?? false));
+        }
+
+        [Fact]
+        public void ShouldReturnNoReleases_WhenTagsDontMatchAndNoDeploymentsExist()
+        {
+            // Arrange
+            var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 1, deploymentEnvironmentsNum: 1);
+            releases[0].Tags = new List<string> { "uat" };
+            var tagsToRetain = new List<string>() { "prod" };
+            SetupMocks(projects, releases, deploymentEnvironments, new List<Deployment>());
+
+            // Act
+            var result = _sut.GetReleasesToKeep(2, tagsToRetain);
+
+            // Assert
+            Assert.Empty(result);
         }
 
         [Fact]
@@ -225,16 +239,16 @@ public class ReleaseRetentionServiceUnitTests
         {
             // Arrange
             var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 3, deploymentEnvironmentsNum: 1);
-            releases[2].Tag = "prod";
+            releases[2].Tags = new List<string> { "prod" };
             var deployments = new List<Deployment>();
             SetupMocks(projects, releases, deploymentEnvironments, deployments);
 
             // Act
-            var result = _sut.GetReleasesToKeep(1);
+            var result = _sut.GetReleasesToKeep(1, new List<string> { "prod" });
 
             // Assert
             Assert.Single(result);
-            Assert.Contains(result, r => r.Id == "Release-3"); // tagged
+            Assert.Contains(result, r => r.Id == "Release-3" && (r.Tags?.Contains("prod") ?? false));
         }
 
         [Fact]
@@ -242,12 +256,12 @@ public class ReleaseRetentionServiceUnitTests
         {
             // Arrange
             var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 3, deploymentEnvironmentsNum: 1);
-            releases[2].Tag = "prod";
+            releases[2].Tags =new List<string> { "prod" };
             var deployments = new List<Deployment>();
             SetupMocks(projects, releases, deploymentEnvironments, deployments);
 
             // Act
-            _sut.GetReleasesToKeep(1);
+            _sut.GetReleasesToKeep(1, new List<string> { "prod" });
 
             // Assert
             _loggerMock.Verify(logger => logger.Log(It.Is<string>(msg => msg == "Release Release-3 (Version: 1.0.3) was retained because it is tagged = 'prod'")), Times.Once);
@@ -258,7 +272,7 @@ public class ReleaseRetentionServiceUnitTests
         {
             // Arrange
             var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 3, deploymentEnvironmentsNum: 1);
-            releases[0].Tag = "prod";
+            releases[0].Tags = new List<string> { "prod" };
             var deployments = new List<Deployment>
             {
                 new Deployment { Id = "Deployment-1", EnvironmentId = deploymentEnvironments[0].Id, ReleaseId = releases[1].Id, DeployedAt = new DateTime(2024, 1, 1) },
@@ -267,7 +281,7 @@ public class ReleaseRetentionServiceUnitTests
             SetupMocks(projects, releases, deploymentEnvironments, deployments);
 
             // Act
-            var result = _sut.GetReleasesToKeep(1);
+            var result = _sut.GetReleasesToKeep(1, new List<string> { "prod" });
 
             // Assert
             Assert.Equal(2, result.Count);
@@ -280,7 +294,7 @@ public class ReleaseRetentionServiceUnitTests
         {
             // Arrange
             var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 3, deploymentEnvironmentsNum: 1);
-            releases[0].Tag = "prod";
+            releases[0].Tags = new List<string> { "prod" };
             var deployments = new List<Deployment>
             {
                 new Deployment { Id = "Deployment-1", EnvironmentId = deploymentEnvironments[0].Id, ReleaseId = releases[1].Id, DeployedAt = new DateTime(2024, 1, 1) },
@@ -289,7 +303,7 @@ public class ReleaseRetentionServiceUnitTests
             SetupMocks(projects, releases, deploymentEnvironments, deployments);
 
             // Act
-            _sut.GetReleasesToKeep(1);
+            _sut.GetReleasesToKeep(1, new List<string> { "prod" });
 
             // Assert
             _loggerMock.Verify(logger => logger.Log(It.IsAny<string>()), Times.Exactly(2));
