@@ -2,6 +2,7 @@
 using OctopusReleaseRetention.Entities;
 using OctopusReleaseRetention.Interfaces;
 using OctopusReleaseRetention.Services;
+using System.Collections.Generic;
 
 namespace OctopusReleaseRetention.Unit.Tests.Services;
 public class ReleaseRetentionServiceUnitTests
@@ -114,8 +115,8 @@ public class ReleaseRetentionServiceUnitTests
         {
             // Arrange
             var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 1, deploymentEnvironmentsNum: 1);
-            releases[0].Tags = new List<string> { "prod", "uat" };
-            var tagsToRetain = new List<string>() { "prod", "dev" };
+            releases[0].Tags = new HashSet<string> { "prod", "uat" };
+            var tagsToRetain = new HashSet<string>() { "prod", "dev" };
             SetupMocks(projects, releases, deploymentEnvironments, new List<Deployment>());
 
             // Act
@@ -131,8 +132,8 @@ public class ReleaseRetentionServiceUnitTests
         {
             // Arrange
             var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 1, deploymentEnvironmentsNum: 1);
-            releases[0].Tags = new List<string> { "uat" };
-            var tagsToRetain = new List<string>() { "prod" };
+            releases[0].Tags = new HashSet<string> { "uat" };
+            var tagsToRetain = new HashSet<string>() { "prod" };
             SetupMocks(projects, releases, deploymentEnvironments, new List<Deployment>());
 
             // Act
@@ -239,7 +240,7 @@ public class ReleaseRetentionServiceUnitTests
         {
             // Arrange
             var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 3, deploymentEnvironmentsNum: 1);
-            releases[2].Tags = new List<string> { "prod" };
+            releases[2].Tags = new HashSet<string> { "prod" };
             var deployments = new List<Deployment>();
             SetupMocks(projects, releases, deploymentEnvironments, deployments);
 
@@ -256,7 +257,7 @@ public class ReleaseRetentionServiceUnitTests
         {
             // Arrange
             var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 3, deploymentEnvironmentsNum: 1);
-            releases[2].Tags =new List<string> { "prod" };
+            releases[2].Tags = new HashSet<string> { "prod" };
             var deployments = new List<Deployment>();
             SetupMocks(projects, releases, deploymentEnvironments, deployments);
 
@@ -272,7 +273,7 @@ public class ReleaseRetentionServiceUnitTests
         {
             // Arrange
             var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 3, deploymentEnvironmentsNum: 1);
-            releases[0].Tags = new List<string> { "prod" };
+            releases[0].Tags = new HashSet<string> { "prod" };
             var deployments = new List<Deployment>
             {
                 new Deployment { Id = "Deployment-1", EnvironmentId = deploymentEnvironments[0].Id, ReleaseId = releases[1].Id, DeployedAt = new DateTime(2024, 1, 1) },
@@ -294,7 +295,7 @@ public class ReleaseRetentionServiceUnitTests
         {
             // Arrange
             var (projects, releases, deploymentEnvironments) = GetDummyData(projectsNum: 1, releasesNum: 3, deploymentEnvironmentsNum: 1);
-            releases[0].Tags = new List<string> { "prod" };
+            releases[0].Tags = new HashSet<string> { "prod" };
             var deployments = new List<Deployment>
             {
                 new Deployment { Id = "Deployment-1", EnvironmentId = deploymentEnvironments[0].Id, ReleaseId = releases[1].Id, DeployedAt = new DateTime(2024, 1, 1) },

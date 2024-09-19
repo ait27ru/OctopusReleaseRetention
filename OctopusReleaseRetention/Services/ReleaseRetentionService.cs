@@ -35,7 +35,7 @@ public class ReleaseRetentionService : IReleaseRetentionService
         var releasesToRetain = new HashSet<Release>();
         var tagsHash = new HashSet<string>(tagsToRetain ?? new List<string>());
 
-        var taggedReleases = _releaseRepository.GetAll(r => r.Tags?.Any(t => tagsHash.Contains(t)) ?? false);
+        var taggedReleases = _releaseRepository.GetAll(r => r.Tags?.Overlaps(tagsHash) ?? false);
 
         foreach (var release in taggedReleases)
         {
@@ -52,7 +52,7 @@ public class ReleaseRetentionService : IReleaseRetentionService
                     var release = _releaseRepository.GetById(d.ReleaseId)!;
                     return d.EnvironmentId == deplEnv.Id
                         && release.ProjectId == project.Id
-                        && !(release.Tags?.Any(t => tagsHash.Contains(t)) ?? false);
+                        && !(release.Tags?.Overlaps(tagsHash) ?? false);
                 });
 
                 var topReleases = nonTaggedDeployments.GroupBy(r => r.ReleaseId)
