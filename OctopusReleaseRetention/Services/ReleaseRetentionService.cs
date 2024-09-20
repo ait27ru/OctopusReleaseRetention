@@ -40,8 +40,7 @@ public class ReleaseRetentionService : IReleaseRetentionService
                 .GroupBy(d => d.ReleaseId)
                 .Select(g => new { ReleaseId = g.Key, DeployedAt = g.Max(d => d.DeployedAt), group.Key.EnvironmentId })
                 .OrderByDescending(d => d.DeployedAt)
-                .Take(numberOfReleasesToKeep)
-                .ToList();
+                .Take(numberOfReleasesToKeep);
 
             foreach (var topRelease in topReleases)
             {
