@@ -17,12 +17,12 @@ namespace OctopusReleaseRetention.Services.Integration.Tests
         public ReleaseRetentionServiceIntegrationTests()
         {
             _logger = new InMemoryLogger();
-            var jsonLoader = new JsonDataLoader("TestData", _logger);
+            var jsonLoader = new StreamedDataLoader("TestData", _logger);
 
-            _projectRepository = new Repository<Project>(jsonLoader.LoadData<Project>("Projects.json"));
-            _releaseRepository = new Repository<Release>(jsonLoader.LoadData<Release>("Releases.json"));
-            _deploymentEnvironmentRepository = new Repository<DeploymentEnvironment>(jsonLoader.LoadData<DeploymentEnvironment>("Environments.json"));
-            _deploymentRepository = new Repository<Deployment>(jsonLoader.LoadData<Deployment>("Deployments.json"));
+            _projectRepository = new StreamedRepository<Project>(jsonLoader.LoadData<Project>("Projects.json").ToList());
+            _releaseRepository = new StreamedRepository<Release>(jsonLoader.LoadData<Release>("Releases.json").ToList());
+            _deploymentEnvironmentRepository = new StreamedRepository<DeploymentEnvironment>(jsonLoader.LoadData<DeploymentEnvironment>("Environments.json").ToList());
+            _deploymentRepository = new StreamedRepository<Deployment>(jsonLoader.LoadData<Deployment>("Deployments.json").ToList());
 
             _sut = new ReleaseRetentionService(_projectRepository, _deploymentEnvironmentRepository,
                 _releaseRepository, _deploymentRepository, _logger);

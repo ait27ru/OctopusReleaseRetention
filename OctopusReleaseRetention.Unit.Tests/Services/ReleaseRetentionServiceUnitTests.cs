@@ -164,7 +164,7 @@ public class ReleaseRetentionServiceUnitTests
             _sut.GetReleasesToKeep(1);
 
             // Assert
-            _loggerMock.Verify(logger => logger.Log(It.Is<string>(msg => 
+            _loggerMock.Verify(logger => logger.Log(It.Is<string>(msg =>
                 msg == "Release Release-1 (Version: 1.0.1) was retained because it is within 1 most recent deployed in Environment-1. Deployment date is: 1/01/2024 12:00:00 AM")), Times.Once);
         }
 

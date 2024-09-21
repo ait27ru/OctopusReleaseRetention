@@ -22,7 +22,7 @@ namespace OctopusReleaseRetention.DataAccess.Unit.Tests
         public void GetAll_ShouldReturnAllItems()
         {
             // Act
-            var result = _sut.GetAll();
+            var result = _sut.GetAll().ToList();
 
             // Assert
             Assert.Equal(2, result.Count);
@@ -51,7 +51,7 @@ namespace OctopusReleaseRetention.DataAccess.Unit.Tests
             _sut.Add(newProject);
 
             // Assert
-            var result = _sut.GetAll();
+            var result = _sut.GetAll().ToList();
             Assert.Equal(3, result.Count); // Initially 2, added 1 more
             Assert.Contains(result, p => p.Id == "Project-3");
         }

@@ -2,11 +2,11 @@
 
 namespace OctopusReleaseRetention.DataAccess;
 
-public class Repository<T> : IRepository<T> where T : class
+public class StreamedRepository<T> : IRepository<T> where T : class
 {
-    private readonly List<T> _entities = new List<T>();
+    private readonly IEnumerable<T> _entities;
 
-    public Repository(List<T> entities)
+    public StreamedRepository(IEnumerable<T> entities)
     {
         _entities = entities;
     }
@@ -15,7 +15,7 @@ public class Repository<T> : IRepository<T> where T : class
     {
         if (filter != null)
         {
-            return _entities.Where(filter).ToList();
+            return _entities.Where(filter);
         }
         return _entities;
     }
@@ -28,11 +28,11 @@ public class Repository<T> : IRepository<T> where T : class
 
     public void Add(T entity)
     {
-        _entities.Add(entity);
+        throw new NotImplementedException();
     }
 
     public void AddRange(IEnumerable<T> range)
     {
-        _entities.AddRange(range);
+        throw new NotImplementedException();
     }
 }

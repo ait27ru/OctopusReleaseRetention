@@ -2,6 +2,6 @@
 {
     public interface IDataLoader
     {
-        List<T> LoadData<T>(string fileName) where T : class;
+        IEnumerable<T> LoadData<T>(string fileName) where T : class;
     }
 }

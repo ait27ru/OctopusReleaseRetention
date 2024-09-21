@@ -14,7 +14,7 @@ public class JsonDataLoader : IDataLoader
         _logger = logger;
     }
 
-    public List<T> LoadData<T>(string file) where T : class
+    public IEnumerable<T> LoadData<T>(string file) where T : class
     {
         var fileName = Path.Combine(_dataPath, file);
 

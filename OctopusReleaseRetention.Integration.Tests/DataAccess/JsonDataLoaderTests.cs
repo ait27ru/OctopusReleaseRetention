@@ -21,7 +21,7 @@ namespace OctopusReleaseRetention.DataAccess.Integration.Tests
             var projects = "Projects.json";
 
             // Act
-            var result = _sut.LoadData<Project>(projects);
+            var result = _sut.LoadData<Project>(projects).ToList();
 
             // Assert
             Assert.Equal(2, result.Count);
