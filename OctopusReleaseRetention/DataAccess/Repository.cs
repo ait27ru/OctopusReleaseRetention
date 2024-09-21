@@ -6,16 +6,16 @@ public class Repository<T> : IRepository<T> where T : class
 {
     private readonly List<T> _entities = new List<T>();
 
-    public Repository(List<T> entities)
+    public Repository(IEnumerable<T> entities)
     {
-        _entities = entities;
+        _entities = entities.ToList();
     }
 
-    public List<T> GetAll(Func<T, bool>? filter = null)
+    public IEnumerable<T> GetAll(Func<T, bool>? filter = null)
     {
         if (filter != null)
         {
-            return _entities.Where(filter).ToList();
+            return _entities.Where(filter);
         }
         return _entities;
     }

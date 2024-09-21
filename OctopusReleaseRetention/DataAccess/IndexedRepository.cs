@@ -16,13 +16,13 @@ public class IndexedRepository<T> : IRepository<T> where T : class
         }
     }
 
-    public List<T> GetAll(Func<T, bool>? filter = null)
+    public IEnumerable<T> GetAll(Func<T, bool>? filter = null)
     {
         if (filter != null)
         {
-            return _entities.Values.Where(filter).ToList();
+            return _entities.Values.Where(filter);
         }
-        return _entities.Values.ToList();
+        return _entities.Values;
     }
 
     public T? GetById(string id)
