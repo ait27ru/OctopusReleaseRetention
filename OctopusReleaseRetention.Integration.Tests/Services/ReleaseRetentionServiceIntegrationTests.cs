@@ -19,10 +19,10 @@ namespace OctopusReleaseRetention.Services.Integration.Tests
             _logger = new InMemoryLogger();
             var jsonLoader = new JsonDataLoader("TestData", _logger);
 
-            _projectRepository = new IndexedRepository<Project>(jsonLoader.LoadData<Project>("Projects.json"));
-            _releaseRepository = new IndexedRepository<Release>(jsonLoader.LoadData<Release>("Releases.json"));
-            _deploymentEnvironmentRepository = new IndexedRepository<DeploymentEnvironment>(jsonLoader.LoadData<DeploymentEnvironment>("Environments.json"));
-            _deploymentRepository = new IndexedRepository<Deployment>(jsonLoader.LoadData<Deployment>("Deployments.json"));
+            _projectRepository = new IndexedRepository<Project>(jsonLoader.LoadDataAsync<Project>("Projects.json").Result);
+            _releaseRepository = new IndexedRepository<Release>(jsonLoader.LoadDataAsync<Release>("Releases.json").Result);
+            _deploymentEnvironmentRepository = new IndexedRepository<DeploymentEnvironment>(jsonLoader.LoadDataAsync<DeploymentEnvironment>("Environments.json").Result);
+            _deploymentRepository = new IndexedRepository<Deployment>(jsonLoader.LoadDataAsync<Deployment>("Deployments.json").Result);
 
             _sut = new ReleaseRetentionService(_projectRepository, _deploymentEnvironmentRepository,
                 _releaseRepository, _deploymentRepository, _logger);

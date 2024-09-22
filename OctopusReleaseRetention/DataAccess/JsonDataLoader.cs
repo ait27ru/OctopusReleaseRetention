@@ -41,4 +41,32 @@ public class JsonDataLoader : IDataLoader
             throw;
         }
     }
+
+    public async Task<List<T>> LoadDataAsync<T>(string file) where T : class
+    {
+        var fileName = Path.Combine(_dataPath, file);
+
+        if (!File.Exists(fileName))
+        {
+            _logger.Log($"File {fileName} not found.");
+            throw new FileNotFoundException();
+        }
+
+        var jsonData = await File.ReadAllTextAsync(fileName);
+
+        try
+        {
+            var data = JsonSerializer.Deserialize<List<T>>(jsonData, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return data ?? new List<T>();
+        }
+        catch (Exception)
+        {
+            _logger.Log($"Error deserialising from {fileName}.");
+            throw;
+        }
+    }
 }
